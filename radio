@@ -1,0 +1,414 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Мое Радио</title>
+    
+    <!-- Telegram Web App Script -->
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- FontAwesome for Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--tg-theme-bg-color, #17212b); /* Fallback to dark */
+            color: var(--tg-theme-text-color, #ffffff);
+            overflow-x: hidden;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        /* Custom Scrollbar for hidden look */
+        ::-webkit-scrollbar {
+            width: 0px;
+            background: transparent;
+        }
+
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 16px;
+        }
+
+        .album-art-shadow {
+            box-shadow: 0 10px 30px -5px rgba(0, 0, 0, 0.5);
+        }
+
+        .visualizer-bar {
+            width: 4px;
+            background-color: var(--tg-theme-button-color, #3390ec);
+            border-radius: 2px;
+            animation: bounce 1s infinite ease-in-out;
+        }
+
+        @keyframes bounce {
+            0%, 100% { height: 5px; }
+            50% { height: 20px; }
+        }
+
+        .page {
+            display: none;
+            animation: fadeIn 0.3s ease;
+        }
+        
+        .page.active {
+            display: block;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Range Slider Styling */
+        input[type=range] {
+            -webkit-appearance: none;
+            width: 100%;
+            background: transparent;
+        }
+        
+        input[type=range]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            height: 16px;
+            width: 16px;
+            border-radius: 50%;
+            background: var(--tg-theme-button-color, #3390ec);
+            cursor: pointer;
+            margin-top: -6px;
+        }
+        
+        input[type=range]::-webkit-slider-runnable-track {
+            width: 100%;
+            height: 4px;
+            cursor: pointer;
+            background: rgba(255,255,255,0.2);
+            border-radius: 2px;
+        }
+
+        .nav-item.active {
+            color: var(--tg-theme-button-color, #3390ec);
+        }
+    </style>
+</head>
+<body class="h-screen flex flex-col">
+
+    <!-- Header -->
+    <header class="flex justify-between items-center p-4">
+        <div class="text-sm opacity-70" id="connection-status"><i class="fas fa-circle text-green-500 text-[8px] mr-1"></i> Online</div>
+        <div class="font-bold text-lg">MY RADIO</div>
+        <div class="w-8 h-8 rounded-full overflow-hidden bg-gray-700">
+            <!-- User Avatar Placeholder -->
+            <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=Felix" alt="User" id="user-avatar">
+        </div>
+    </header>
+
+    <!-- Main Content Area -->
+    <main class="flex-1 overflow-y-auto pb-24 relative">
+        
+        <!-- PAGE 1: PLAYER -->
+        <div id="page-player" class="page active px-6 pt-4">
+            <!-- Album Art -->
+            <div class="relative w-full aspect-square max-w-sm mx-auto mb-8">
+                <div class="w-full h-full rounded-2xl overflow-hidden album-art-shadow relative">
+                    <img src="https://images.unsplash.com/photo-1470225620780-dba8ba36b745?w=800&q=80" alt="Album Art" class="w-full h-full object-cover">
+                    <div class="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent"></div>
+                    
+                    <!-- Live Badge -->
+                    <div class="absolute top-4 left-4 bg-red-500 text-white text-xs font-bold px-2 py-1 rounded-md animate-pulse">
+                        LIVE
+                    </div>
+                </div>
+            </div>
+
+            <!-- Track Info -->
+            <div class="text-center mb-8">
+                <h2 class="text-2xl font-bold mb-1 truncate" id="track-title">Night Vibes Session</h2>
+                <p class="text-sm opacity-70 truncate" id="artist-name">DJ Alexander • Live Mix</p>
+            </div>
+
+            <!-- Visualizer (Decoration) -->
+            <div class="flex justify-center items-center gap-1 h-8 mb-8" id="visualizer">
+                <!-- Bars generated by JS -->
+            </div>
+
+            <!-- Controls -->
+            <div class="flex flex-col gap-6">
+                <!-- Progress (Fake for live radio, represents buffer/time) -->
+                <div class="w-full">
+                     <div class="flex justify-between text-xs opacity-50 mb-2">
+                        <span id="current-time">00:00</span>
+                        <span>LIVE</span>
+                    </div>
+                    <div class="h-1 bg-gray-700 rounded-full overflow-hidden">
+                        <div class="h-full w-full bg-red-500 origin-left"></div>
+                    </div>
+                </div>
+
+                <!-- Main Buttons -->
+                <div class="flex justify-center items-center gap-8">
+                    <button class="text-2xl opacity-70 hover:opacity-100 transition"><i class="fas fa-backward-step"></i></button>
+                    
+                    <button id="play-btn" class="w-16 h-16 rounded-full bg-[var(--tg-theme-button-color,#3390ec)] text-white flex items-center justify-center text-2xl shadow-lg hover:scale-105 transition transform">
+                        <i class="fas fa-play ml-1"></i>
+                    </button>
+                    
+                    <button class="text-2xl opacity-70 hover:opacity-100 transition"><i class="fas fa-forward-step"></i></button>
+                </div>
+                
+                <!-- Volume -->
+                <div class="flex items-center gap-3 px-4 mt-2">
+                    <i class="fas fa-volume-low text-xs opacity-50"></i>
+                    <input type="range" min="0" max="100" value="80" class="flex-1">
+                    <i class="fas fa-volume-high text-xs opacity-50"></i>
+                </div>
+            </div>
+        </div>
+
+        <!-- PAGE 2: SCHEDULE -->
+        <div id="page-schedule" class="page px-4 pt-4">
+            <h2 class="text-xl font-bold mb-4">Расписание эфиров</h2>
+            
+            <div class="space-y-3">
+                <!-- Show Item Active -->
+                <div class="glass-panel p-4 flex gap-4 items-center border-l-4 border-red-500">
+                    <div class="text-center min-w-[50px]">
+                        <div class="font-bold text-red-500">NOW</div>
+                    </div>
+                    <div>
+                        <div class="font-bold">Night Vibes</div>
+                        <div class="text-xs opacity-70">22:00 - 00:00 • DJ Alexander</div>
+                    </div>
+                </div>
+
+                <!-- Show Item -->
+                <div class="glass-panel p-4 flex gap-4 items-center">
+                    <div class="text-center min-w-[50px]">
+                        <div class="font-bold">00:00</div>
+                    </div>
+                    <div>
+                        <div class="font-bold">Chillout Zone</div>
+                        <div class="text-xs opacity-70">00:00 - 02:00 • AutoDJ</div>
+                    </div>
+                </div>
+
+                <!-- Show Item -->
+                <div class="glass-panel p-4 flex gap-4 items-center">
+                    <div class="text-center min-w-[50px]">
+                        <div class="font-bold">08:00</div>
+                    </div>
+                    <div>
+                        <div class="font-bold">Утреннее Шоу</div>
+                        <div class="text-xs opacity-70">08:00 - 11:00 • Света и Макс</div>
+                    </div>
+                </div>
+                 <!-- Show Item -->
+                 <div class="glass-panel p-4 flex gap-4 items-center">
+                    <div class="text-center min-w-[50px]">
+                        <div class="font-bold">14:00</div>
+                    </div>
+                    <div>
+                        <div class="font-bold">Rock Hour</div>
+                        <div class="text-xs opacity-70">14:00 - 15:00 • Special Guest</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- PAGE 3: REQUESTS -->
+        <div id="page-requests" class="page px-4 pt-4">
+            <div class="text-center mb-6">
+                <h2 class="text-xl font-bold">Приветы и Заказы</h2>
+                <p class="text-sm opacity-70">Напишите сообщение в прямой эфир</p>
+            </div>
+
+            <div class="glass-panel p-4 mb-4">
+                <label class="block text-xs uppercase opacity-50 mb-2 font-bold">Ваше имя</label>
+                <input type="text" id="user-name-input" class="w-full bg-transparent border-b border-gray-600 py-2 focus:outline-none focus:border-[var(--tg-theme-button-color,#3390ec)] transition" placeholder="Слушатель">
+            </div>
+
+            <div class="glass-panel p-4 mb-6">
+                <label class="block text-xs uppercase opacity-50 mb-2 font-bold">Сообщение / Трек</label>
+                <textarea id="request-msg" rows="4" class="w-full bg-transparent border-none focus:outline-none resize-none" placeholder="Передаю привет всем! Поставьте Linkin Park..."></textarea>
+            </div>
+
+            <button id="send-request-btn" class="w-full bg-[var(--tg-theme-button-color,#3390ec)] text-white font-bold py-4 rounded-xl shadow-lg active:scale-95 transition">
+                Отправить в студию
+            </button>
+        </div>
+
+    </main>
+
+    <!-- Bottom Navigation -->
+    <nav class="fixed bottom-0 left-0 right-0 glass-panel m-4 mt-0 py-3 px-6 flex justify-between items-center z-50 shadow-2xl">
+        <button class="nav-item active flex flex-col items-center gap-1 w-16" onclick="switchPage('player')">
+            <i class="fas fa-music text-xl"></i>
+            <span class="text-[10px]">Эфир</span>
+        </button>
+        
+        <button class="nav-item opacity-50 flex flex-col items-center gap-1 w-16" onclick="switchPage('schedule')">
+            <i class="fas fa-calendar-days text-xl"></i>
+            <span class="text-[10px]">План</span>
+        </button>
+        
+        <button class="nav-item opacity-50 flex flex-col items-center gap-1 w-16" onclick="switchPage('requests')">
+            <i class="fas fa-comment-dots text-xl"></i>
+            <span class="text-[10px]">Чат</span>
+        </button>
+    </nav>
+
+    <!-- Hidden Audio Element -->
+    <!-- Using a sample stream URL. In production, replace with your Icecast/Shoutcast URL -->
+    <audio id="audio-player" preload="none">
+        <source src="https://stream.zeno.fm/t312r69h898uv" type="audio/mpeg">
+        Your browser does not support the audio element.
+    </audio>
+
+    <script>
+        // --- Telegram Web App Integration ---
+        const tg = window.Telegram.WebApp;
+
+        // Initialize
+        tg.ready();
+        tg.expand(); // Make it full height
+
+        // Apply Telegram Theme Colors dynamically
+        document.documentElement.style.setProperty('--tg-theme-bg-color', tg.backgroundColor || '#17212b');
+        document.documentElement.style.setProperty('--tg-theme-text-color', tg.textColor || '#ffffff');
+        document.documentElement.style.setProperty('--tg-theme-button-color', tg.buttonColor || '#3390ec');
+        document.documentElement.style.setProperty('--tg-theme-button-text-color', tg.buttonTextColor || '#ffffff');
+
+        // Set User Info if available
+        if (tg.initDataUnsafe && tg.initDataUnsafe.user) {
+            const user = tg.initDataUnsafe.user;
+            document.getElementById('user-name-input').value = user.first_name;
+            // Note: Telegram doesn't provide avatar URL in initDataUnsafe directly for privacy, 
+            // usually you fetch it via bot API, but we'll stick to placeholder or initials.
+        }
+
+        // --- UI Logic ---
+
+        // Visualizer Animation Generation
+        const visualizer = document.getElementById('visualizer');
+        for(let i=0; i<20; i++) {
+            const bar = document.createElement('div');
+            bar.className = 'visualizer-bar';
+            bar.style.animationDuration = (0.5 + Math.random() * 0.5) + 's';
+            visualizer.appendChild(bar);
+        }
+
+        // Player Logic
+        const audio = document.getElementById('audio-player');
+        const playBtn = document.getElementById('play-btn');
+        const icon = playBtn.querySelector('i');
+        let isPlaying = false;
+        let timerInterval;
+        let seconds = 0;
+
+        playBtn.addEventListener('click', togglePlay);
+
+        function togglePlay() {
+            if (isPlaying) {
+                audio.pause();
+                icon.className = 'fas fa-play ml-1';
+                icon.parentElement.classList.remove('animate-pulse');
+                stopTimer();
+            } else {
+                audio.play().catch(e => {
+                    // Autoplay policy might block this without interaction
+                    console.log("Audio play failed", e);
+                    tg.showAlert("Не удалось запустить поток. Проверьте соединение.");
+                });
+                icon.className = 'fas fa-pause';
+                icon.parentElement.classList.add('animate-pulse');
+                startTimer();
+            }
+            isPlaying = !isPlaying;
+        }
+
+        function startTimer() {
+            const timeDisplay = document.getElementById('current-time');
+            timerInterval = setInterval(() => {
+                seconds++;
+                const mins = Math.floor(seconds / 60).toString().padStart(2, '0');
+                const secs = (seconds % 60).toString().padStart(2, '0');
+                timeDisplay.textContent = `${mins}:${secs}`;
+            }, 1000);
+        }
+
+        function stopTimer() {
+            clearInterval(timerInterval);
+        }
+
+        // Navigation Logic
+        function switchPage(pageId) {
+            // Hide all pages
+            document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+            // Show target page
+            document.getElementById('page-' + pageId).classList.add('active');
+            
+            // Update Tab Icons
+            document.querySelectorAll('.nav-item').forEach(item => {
+                item.classList.remove('active', 'opacity-100');
+                item.classList.add('opacity-50');
+            });
+            
+            // Highlight active tab
+            const activeBtn = event.currentTarget;
+            activeBtn.classList.add('active', 'opacity-100');
+            activeBtn.classList.remove('opacity-50');
+
+            // Haptic Feedback
+            if(tg.HapticFeedback) {
+                tg.HapticFeedback.selectionChanged();
+            }
+        }
+
+        // Request Logic
+        document.getElementById('send-request-btn').addEventListener('click', () => {
+            const msg = document.getElementById('request-msg').value;
+            const name = document.getElementById('user-name-input').value;
+            
+            if(!msg.trim()) {
+                if(tg.HapticFeedback) tg.HapticFeedback.notificationOccurred('error');
+                return;
+            }
+
+            // Simulate sending data back to bot
+            const data = JSON.stringify({
+                action: 'request_song',
+                user: name,
+                text: msg
+            });
+
+            // In a real app, you might use tg.sendData(data) to send to bot chat
+            // or send to your backend via fetch().
+            
+            // For demo:
+            if(tg.HapticFeedback) tg.HapticFeedback.notificationOccurred('success');
+            tg.showPopup({
+                title: 'Отправлено!',
+                message: `Спасибо, ${name}. Ваше сообщение передано диджею.`,
+                buttons: [{type: 'ok'}]
+            });
+            
+            document.getElementById('request-msg').value = '';
+        });
+
+        // Main Button Logic (optional)
+        // You can use the big "Main Button" at the bottom instead of in-page buttons
+        // tg.MainButton.setText('PLAY RADIO');
+        // tg.MainButton.show();
+        // tg.MainButton.onClick(togglePlay);
+
+    </script>
+</body>
+</html>
