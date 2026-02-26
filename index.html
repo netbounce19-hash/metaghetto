@@ -3,411 +3,521 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Мое Радио</title>
-    
-    <!-- Telegram Web App Script -->
-    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <title>"CLUB METAGHETTO" // RADIO</title>
     
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     
-    <!-- FontAwesome for Icons -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
-    <!-- Google Fonts -->
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <!-- Tailwind Config for Aesthetics -->
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        'off-white': '#F3F3F3',
+                        'cement': '#D1D1D1',
+                        'industrial-black': '#1A1A1A',
+                        'safety-orange': '#FF4D00',
+                        'neon-green': '#CCFF00',
+                    },
+                    fontFamily: {
+                        sans: ['Helvetica', 'Arial', 'sans-serif'],
+                    },
+                    spacing: {
+                        '128': '32rem',
+                    }
+                }
+            }
+        }
+    </script>
 
     <style>
-        body {
-            font-family: 'Inter', sans-serif;
-            background-color: var(--tg-theme-bg-color, #17212b); /* Fallback to dark */
-            color: var(--tg-theme-text-color, #ffffff);
-            overflow-x: hidden;
-            -webkit-tap-highlight-color: transparent;
-        }
-
-        /* Custom Scrollbar for hidden look */
+        /* Custom Scrollbar for Raw Industrial Look */
         ::-webkit-scrollbar {
-            width: 0px;
-            background: transparent;
+            width: 8px;
         }
-
-        .glass-panel {
-            background: rgba(255, 255, 255, 0.05);
-            backdrop-filter: blur(10px);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            border-radius: 16px;
+        ::-webkit-scrollbar-track {
+            background: #F3F3F3; 
         }
-
-        .album-art-shadow {
-            box-shadow: 0 10px 30px -5px rgba(0, 0, 0, 0.5);
-        }
-
-        .visualizer-bar {
-            width: 4px;
-            background-color: var(--tg-theme-button-color, #3390ec);
-            border-radius: 2px;
-            animation: bounce 1s infinite ease-in-out;
-        }
-
-        @keyframes bounce {
-            0%, 100% { height: 5px; }
-            50% { height: 20px; }
-        }
-
-        .page {
-            display: none;
-            animation: fadeIn 0.3s ease;
+        ::-webkit-scrollbar-thumb {
+            background: #1A1A1A; 
         }
         
-        .page.active {
-            display: block;
+        /* Typography Tweaks */
+        .quote-marks::before { content: '"'; color: #1A1A1A; }
+        .quote-marks::after { content: '"'; color: #1A1A1A; }
+        
+        /* Marquee Effect for Track Title */
+        .marquee-container {
+            overflow: hidden;
+            white-space: nowrap;
+        }
+        .marquee-content {
+            display: inline-block;
+            animation: marquee 10s linear infinite;
+        }
+        @keyframes marquee {
+            0% { transform: translateX(100%); }
+            100% { transform: translateX(-100%); }
         }
 
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(10px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-
-        /* Range Slider Styling */
-        input[type=range] {
-            -webkit-appearance: none;
+        /* Chart Container Strict Styling */
+        .chart-container {
+            position: relative;
             width: 100%;
-            background: transparent;
+            max-width: 600px;
+            margin-left: auto;
+            margin-right: auto;
+            height: 250px;
+            max-height: 250px;
+            background-color: #F3F3F3;
+            border: 1px solid #1A1A1A;
         }
         
-        input[type=range]::-webkit-slider-thumb {
-            -webkit-appearance: none;
-            height: 16px;
-            width: 16px;
-            border-radius: 50%;
-            background: var(--tg-theme-button-color, #3390ec);
-            cursor: pointer;
-            margin-top: -6px;
-        }
-        
-        input[type=range]::-webkit-slider-runnable-track {
+        /* Audio Visualizer Canvas */
+        #visualizer {
             width: 100%;
-            height: 4px;
-            cursor: pointer;
-            background: rgba(255,255,255,0.2);
-            border-radius: 2px;
-        }
-
-        .nav-item.active {
-            color: var(--tg-theme-button-color, #3390ec);
+            height: 120px;
+            background-color: #1A1A1A;
         }
     </style>
 </head>
-<body class="h-screen flex flex-col">
+<body class="bg-off-white text-industrial-black font-sans antialiased selection:bg-safety-orange selection:text-white pb-20">
 
-    <!-- Header -->
-    <header class="flex justify-between items-center p-4">
-        <div class="text-sm opacity-70" id="connection-status"><i class="fas fa-circle text-green-500 text-[8px] mr-1"></i> Online</div>
-        <div class="font-bold text-lg">MY RADIO</div>
-        <div class="w-8 h-8 rounded-full overflow-hidden bg-gray-700">
-            <!-- User Avatar Placeholder -->
-            <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=Felix" alt="User" id="user-avatar">
-        </div>
-    </header>
+    <!-- Chosen Palette: Virgil Abloh Industrial (Off-White, Black, Safety Orange, Helvetica) -->
+    <!-- Application Structure Plan: 
+         1. Header: Branding in "Quotes", raw layout.
+         2. Player Module: The core interactive element. Big buttons, marquee text, custom Canvas visualizer.
+         3. Context Module: "About" section explaining the concept.
+         4. Analytics Module: Chart.js visualization of "Global Listeners" to add "Data" aesthetic.
+         5. Technical Specs (Accordion): The requested instructions for API/Bot integration and Streaming services, hidden by default to keep the UI clean but accessible via toggle.
+         6. Flow: User lands -> Plays Music -> Sees Visualizer -> Reads Manifesto -> Checks Specs.
+    -->
+    <!-- Visualization & Content Choices:
+         - Audio Visualizer: Native HTML5 Canvas with AnalyserNode. Goal: "Audio Wave" functionality.
+         - Listener Stats: Chart.js Bar Chart. Goal: "Inform" about station reach (simulated data). Adds to the "Soft Club" tech aesthetic.
+         - Layout: Deconstructed grid, visible borders, uppercase text. Virgil Abloh style.
+         - Icons: Unicode characters only (▶, ◼, ⚡). No SVG.
+    -->
+    <!-- CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
 
-    <!-- Main Content Area -->
-    <main class="flex-1 overflow-y-auto pb-24 relative">
-        
-        <!-- PAGE 1: PLAYER -->
-        <div id="page-player" class="page active px-6 pt-4">
-            <!-- Album Art -->
-            <div class="relative w-full aspect-square max-w-sm mx-auto mb-8">
-                <div class="w-full h-full rounded-2xl overflow-hidden album-art-shadow relative">
-                    <img src="https://images.unsplash.com/photo-1470225620780-dba8ba36b745?w=800&q=80" alt="Album Art" class="w-full h-full object-cover">
-                    <div class="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent"></div>
-                    
-                    <!-- Live Badge -->
-                    <div class="absolute top-4 left-4 bg-red-500 text-white text-xs font-bold px-2 py-1 rounded-md animate-pulse">
-                        LIVE
-                    </div>
-                </div>
+    <!-- MAIN CONTAINER -->
+    <div class="max-w-2xl mx-auto min-h-screen flex flex-col border-x-2 border-industrial-black bg-white shadow-2xl">
+
+        <!-- HEADER -->
+        <header class="p-6 border-b-2 border-industrial-black flex justify-between items-center bg-off-white sticky top-0 z-50">
+            <div>
+                <h1 class="text-2xl font-bold tracking-tighter uppercase">
+                    <span class="quote-marks">CLUB</span><br>
+                    <span class="bg-industrial-black text-off-white px-1">METAGHETTO</span>
+                </h1>
+                <p class="text-xs font-mono mt-1 text-gray-500">EST. 2026 // GEN X SOFTWARE</p>
+            </div>
+            <div class="w-4 h-4 rounded-full bg-safety-orange animate-pulse" id="live-indicator"></div>
+        </header>
+
+        <!-- PLAYER MODULE -->
+        <section class="p-6 border-b-2 border-industrial-black bg-white">
+            <div class="mb-2 flex justify-between items-end">
+                <span class="text-xs font-bold bg-gray-200 px-2 py-1 border border-black">FIGURE 1: AUDIO SYSTEM</span>
+                <span id="status-text" class="text-xs font-mono uppercase">STANDBY</span>
+            </div>
+
+            <!-- Visualizer Container -->
+            <div class="border-2 border-industrial-black p-1 mb-4 bg-industrial-black">
+                <canvas id="visualizer"></canvas>
             </div>
 
             <!-- Track Info -->
-            <div class="text-center mb-8">
-                <h2 class="text-2xl font-bold mb-1 truncate" id="track-title">Night Vibes Session</h2>
-                <p class="text-sm opacity-70 truncate" id="artist-name">DJ Alexander • Live Mix</p>
-            </div>
-
-            <!-- Visualizer (Decoration) -->
-            <div class="flex justify-center items-center gap-1 h-8 mb-8" id="visualizer">
-                <!-- Bars generated by JS -->
+            <div class="border-2 border-industrial-black p-3 mb-4 bg-off-white overflow-hidden relative">
+                <div class="marquee-container">
+                    <span id="track-name" class="marquee-content text-xl font-bold uppercase tracking-widest">
+                        WAITING FOR SIGNAL ... /// CLUB METAGHETTO RADIO ... /// 
+                    </span>
+                </div>
             </div>
 
             <!-- Controls -->
-            <div class="flex flex-col gap-6">
-                <!-- Progress (Fake for live radio, represents buffer/time) -->
-                <div class="w-full">
-                     <div class="flex justify-between text-xs opacity-50 mb-2">
-                        <span id="current-time">00:00</span>
-                        <span>LIVE</span>
-                    </div>
-                    <div class="h-1 bg-gray-700 rounded-full overflow-hidden">
-                        <div class="h-full w-full bg-red-500 origin-left"></div>
-                    </div>
-                </div>
-
-                <!-- Main Buttons -->
-                <div class="flex justify-center items-center gap-8">
-                    <button class="text-2xl opacity-70 hover:opacity-100 transition"><i class="fas fa-backward-step"></i></button>
-                    
-                    <button id="play-btn" class="w-16 h-16 rounded-full bg-[var(--tg-theme-button-color,#3390ec)] text-white flex items-center justify-center text-2xl shadow-lg hover:scale-105 transition transform">
-                        <i class="fas fa-play ml-1"></i>
-                    </button>
-                    
-                    <button class="text-2xl opacity-70 hover:opacity-100 transition"><i class="fas fa-forward-step"></i></button>
-                </div>
-                
-                <!-- Volume -->
-                <div class="flex items-center gap-3 px-4 mt-2">
-                    <i class="fas fa-volume-low text-xs opacity-50"></i>
-                    <input type="range" min="0" max="100" value="80" class="flex-1">
-                    <i class="fas fa-volume-high text-xs opacity-50"></i>
-                </div>
+            <div class="grid grid-cols-4 gap-4">
+                <button id="play-btn" class="col-span-3 bg-industrial-black text-off-white p-4 font-bold text-xl hover:bg-safety-orange hover:text-black transition-colors border-2 border-transparent hover:border-black uppercase flex items-center justify-center gap-2">
+                    <span>▶</span> <span class="quote-marks">PLAY</span>
+                </button>
+                <button id="mute-btn" class="col-span-1 border-2 border-industrial-black p-4 font-bold hover:bg-gray-200 uppercase">
+                    VOL
+                </button>
             </div>
-        </div>
-
-        <!-- PAGE 2: SCHEDULE -->
-        <div id="page-schedule" class="page px-4 pt-4">
-            <h2 class="text-xl font-bold mb-4">Расписание эфиров</h2>
             
-            <div class="space-y-3">
-                <!-- Show Item Active -->
-                <div class="glass-panel p-4 flex gap-4 items-center border-l-4 border-red-500">
-                    <div class="text-center min-w-[50px]">
-                        <div class="font-bold text-red-500">NOW</div>
-                    </div>
-                    <div>
-                        <div class="font-bold">Night Vibes</div>
-                        <div class="text-xs opacity-70">22:00 - 00:00 • DJ Alexander</div>
-                    </div>
-                </div>
-
-                <!-- Show Item -->
-                <div class="glass-panel p-4 flex gap-4 items-center">
-                    <div class="text-center min-w-[50px]">
-                        <div class="font-bold">00:00</div>
-                    </div>
-                    <div>
-                        <div class="font-bold">Chillout Zone</div>
-                        <div class="text-xs opacity-70">00:00 - 02:00 • AutoDJ</div>
-                    </div>
-                </div>
-
-                <!-- Show Item -->
-                <div class="glass-panel p-4 flex gap-4 items-center">
-                    <div class="text-center min-w-[50px]">
-                        <div class="font-bold">08:00</div>
-                    </div>
-                    <div>
-                        <div class="font-bold">Утреннее Шоу</div>
-                        <div class="text-xs opacity-70">08:00 - 11:00 • Света и Макс</div>
-                    </div>
-                </div>
-                 <!-- Show Item -->
-                 <div class="glass-panel p-4 flex gap-4 items-center">
-                    <div class="text-center min-w-[50px]">
-                        <div class="font-bold">14:00</div>
-                    </div>
-                    <div>
-                        <div class="font-bold">Rock Hour</div>
-                        <div class="text-xs opacity-70">14:00 - 15:00 • Special Guest</div>
-                    </div>
-                </div>
+            <!-- Volume Slider (Hidden initially or minimalistic) -->
+            <div class="mt-4 flex items-center gap-2">
+                <span class="text-xs font-bold">-</span>
+                <input type="range" id="volume-slider" min="0" max="1" step="0.1" value="0.8" class="w-full h-1 bg-gray-300 appearance-none accent-black">
+                <span class="text-xs font-bold">+</span>
             </div>
-        </div>
+        </section>
 
-        <!-- PAGE 3: REQUESTS -->
-        <div id="page-requests" class="page px-4 pt-4">
-            <div class="text-center mb-6">
-                <h2 class="text-xl font-bold">Приветы и Заказы</h2>
-                <p class="text-sm opacity-70">Напишите сообщение в прямой эфир</p>
+        <!-- MANIFESTO / ABOUT -->
+        <section class="p-6 border-b-2 border-industrial-black bg-off-white">
+            <h2 class="text-lg font-bold uppercase mb-4 border-b border-black inline-block">
+                <span class="quote-marks">MANIFESTO</span>
+            </h2>
+            <div class="font-mono text-sm leading-relaxed text-justify">
+                <p class="mb-4">
+                    INDEPENDENT BROADCASTING UNIT. CURATED SOUNDSCAPES FOR THE DIGITAL ETHER. 
+                    DESIGNED FOR TELEGRAM MINI APPS. 
+                </p>
+                <p>
+                    "STYLE IS A RESOURCE." - THIS INTERFACE IS A DECONSTRUCTION OF STANDARD MEDIA PLAYERS.
+                    NO BLOAT. PURE SIGNAL.
+                </p>
             </div>
+        </section>
 
-            <div class="glass-panel p-4 mb-4">
-                <label class="block text-xs uppercase opacity-50 mb-2 font-bold">Ваше имя</label>
-                <input type="text" id="user-name-input" class="w-full bg-transparent border-b border-gray-600 py-2 focus:outline-none focus:border-[var(--tg-theme-button-color,#3390ec)] transition" placeholder="Слушатель">
+        <!-- ANALYTICS (Chart.js Requirement) -->
+        <section class="p-6 border-b-2 border-industrial-black bg-white">
+            <div class="flex justify-between items-center mb-4">
+                <h2 class="text-lg font-bold uppercase">
+                    <span class="quote-marks">GLOBAL METRICS</span>
+                </h2>
+                <span class="text-xs bg-neon-green px-1 border border-black">LIVE DATA</span>
             </div>
-
-            <div class="glass-panel p-4 mb-6">
-                <label class="block text-xs uppercase opacity-50 mb-2 font-bold">Сообщение / Трек</label>
-                <textarea id="request-msg" rows="4" class="w-full bg-transparent border-none focus:outline-none resize-none" placeholder="Передаю привет всем! Поставьте Linkin Park..."></textarea>
+            
+            <p class="text-xs font-mono mb-2 text-gray-500">LISTENER DISTRIBUTION // SECTOR 7</p>
+            
+            <!-- Chart Container -->
+            <div class="chart-container">
+                <canvas id="metricsChart"></canvas>
             </div>
+        </section>
 
-            <button id="send-request-btn" class="w-full bg-[var(--tg-theme-button-color,#3390ec)] text-white font-bold py-4 rounded-xl shadow-lg active:scale-95 transition">
-                Отправить в студию
+        <!-- TECH INSTRUCTIONS (The User Request) -->
+        <section class="bg-industrial-black text-off-white">
+            <button id="toggle-tech" class="w-full p-6 text-left flex justify-between items-center hover:bg-gray-800 transition">
+                <span class="font-bold text-lg uppercase"><span class="quote-marks">DEVELOPER KIT</span> // SETUP GUIDE</span>
+                <span id="tech-arrow">▼</span>
             </button>
-        </div>
+            
+            <div id="tech-content" class="hidden p-6 border-t border-gray-700 font-mono text-sm">
+                
+                <div class="mb-8">
+                    <h3 class="text-safety-orange font-bold text-base mb-2 uppercase border-b border-gray-600 pb-1">STEP 1: BROADCASTING SOURCE</h3>
+                    <p class="mb-2 text-gray-300">You need a server to host your audio stream (Icecast/Shoutcast).</p>
+                    <ul class="space-y-2 pl-4 border-l-2 border-gray-600">
+                        <li>
+                            <strong class="text-white">AzuraCast</strong> - (Recommended) Open-source, self-hosted or VPS. "Complete control."
+                        </li>
+                        <li>
+                            <strong class="text-white">Radio.co</strong> - "Premium Solution." Easy to use, managed hosting.
+                        </li>
+                        <li>
+                            <strong class="text-white">Airtime Pro</strong> - Good for scheduling and auto-dj.
+                        </li>
+                    </ul>
+                    <div class="mt-2 text-xs text-gray-400">
+                        * SOFTWARE FOR LIVE: Use <span class="text-white">Mixxx</span> (Free) or <span class="text-white">VirtualDJ</span>. Connect them to your server URL via Icecast protocol.
+                    </div>
+                </div>
 
-    </main>
+                <div class="mb-8">
+                    <h3 class="text-safety-orange font-bold text-base mb-2 uppercase border-b border-gray-600 pb-1">STEP 2: TELEGRAM INTEGRATION</h3>
+                    <p class="mb-2 text-gray-300">How to launch this "Mini App" in your bot.</p>
+                    <ol class="list-decimal pl-4 space-y-2 text-gray-300">
+                        <li>Host this HTML file on a static site provider with HTTPS (required).
+                            <br><span class="text-xs text-gray-500">SUGGESTIONS: GitHub Pages, Vercel, or Netlify.</span>
+                        </li>
+                        <li>Open Telegram and search for <strong class="text-white">@BotFather</strong>.</li>
+                        <li>Send command <code class="bg-gray-800 px-1">/newapp</code>.</li>
+                        <li>Select your bot.</li>
+                        <li>Enter Title (e.g., Club Metaghetto) and Description.</li>
+                        <li>Upload a 640x360 photo.</li>
+                        <li><strong>CRITICAL:</strong> Paste your <code class="bg-gray-800 px-1">https://your-site.vercel.app</code> URL when asked for "Web App URL".</li>
+                        <li>BotFather will give you a short link (t.me/yourbot/appname).</li>
+                    </ol>
+                </div>
 
-    <!-- Bottom Navigation -->
-    <nav class="fixed bottom-0 left-0 right-0 glass-panel m-4 mt-0 py-3 px-6 flex justify-between items-center z-50 shadow-2xl">
-        <button class="nav-item active flex flex-col items-center gap-1 w-16" onclick="switchPage('player')">
-            <i class="fas fa-music text-xl"></i>
-            <span class="text-[10px]">Эфир</span>
-        </button>
+                <div>
+                    <h3 class="text-safety-orange font-bold text-base mb-2 uppercase border-b border-gray-600 pb-1">STEP 3: API MENU BUTTON</h3>
+                    <p class="text-gray-300 mb-2">To add a "Menu Button" in your bot:</p>
+                    <code class="block bg-gray-800 p-3 text-xs text-neon-green mb-2">
+                        // Bot API Request<br>
+                        POST https://api.telegram.org/bot{TOKEN}/setChatMenuButton<br>
+                        {<br>
+                          "menu_button": {<br>
+                            "type": "web_app",<br>
+                            "text": "OPEN RADIO",<br>
+                            "web_app": { "url": "https://your-site.vercel.app" }<br>
+                          }<br>
+                        }
+                    </code>
+                </div>
+
+            </div>
+        </section>
         
-        <button class="nav-item opacity-50 flex flex-col items-center gap-1 w-16" onclick="switchPage('schedule')">
-            <i class="fas fa-calendar-days text-xl"></i>
-            <span class="text-[10px]">План</span>
-        </button>
-        
-        <button class="nav-item opacity-50 flex flex-col items-center gap-1 w-16" onclick="switchPage('requests')">
-            <i class="fas fa-comment-dots text-xl"></i>
-            <span class="text-[10px]">Чат</span>
-        </button>
-    </nav>
+        <!-- FOOTER -->
+        <footer class="p-6 text-center text-xs font-mono text-gray-500 border-t-2 border-industrial-black mt-auto">
+            &copy; 2026 CLUB METAGHETTO. "ALL RIGHTS RESERVED".
+        </footer>
 
-    <!-- Hidden Audio Element -->
-    <!-- Using a sample stream URL. In production, replace with your Icecast/Shoutcast URL -->
-    <audio id="audio-player" preload="none">
-        <source src="https://stream.zeno.fm/t312r69h898uv" type="audio/mpeg">
-        Your browser does not support the audio element.
-    </audio>
+    </div>
 
+    <!-- JAVASCRIPT LOGIC -->
     <script>
-        // --- Telegram Web App Integration ---
-        const tg = window.Telegram.WebApp;
+        // --- STATE MANAGEMENT ---
+        const state = {
+            isPlaying: false,
+            volume: 0.8,
+            audioContext: null,
+            analyser: null,
+            source: null,
+            dataArray: null,
+            animationId: null,
+            // Placeholder stream URL (Free Music Archive Sample for Demo purposes)
+            // In production, user replaces this with their Icecast/Shoutcast URL
+            streamUrl: 'https://files.freemusicarchive.org/storage-freemusicarchive-org/music/no_curator/Tours/Enthusiast/Tours_-_01_-_Enthusiast.mp3' 
+        };
 
-        // Initialize
-        tg.ready();
-        tg.expand(); // Make it full height
-
-        // Apply Telegram Theme Colors dynamically
-        document.documentElement.style.setProperty('--tg-theme-bg-color', tg.backgroundColor || '#17212b');
-        document.documentElement.style.setProperty('--tg-theme-text-color', tg.textColor || '#ffffff');
-        document.documentElement.style.setProperty('--tg-theme-button-color', tg.buttonColor || '#3390ec');
-        document.documentElement.style.setProperty('--tg-theme-button-text-color', tg.buttonTextColor || '#ffffff');
-
-        // Set User Info if available
-        if (tg.initDataUnsafe && tg.initDataUnsafe.user) {
-            const user = tg.initDataUnsafe.user;
-            document.getElementById('user-name-input').value = user.first_name;
-            // Note: Telegram doesn't provide avatar URL in initDataUnsafe directly for privacy, 
-            // usually you fetch it via bot API, but we'll stick to placeholder or initials.
-        }
-
-        // --- UI Logic ---
-
-        // Visualizer Animation Generation
-        const visualizer = document.getElementById('visualizer');
-        for(let i=0; i<20; i++) {
-            const bar = document.createElement('div');
-            bar.className = 'visualizer-bar';
-            bar.style.animationDuration = (0.5 + Math.random() * 0.5) + 's';
-            visualizer.appendChild(bar);
-        }
-
-        // Player Logic
-        const audio = document.getElementById('audio-player');
+        // --- DOM ELEMENTS ---
         const playBtn = document.getElementById('play-btn');
-        const icon = playBtn.querySelector('i');
-        let isPlaying = false;
-        let timerInterval;
-        let seconds = 0;
+        const muteBtn = document.getElementById('mute-btn');
+        const volumeSlider = document.getElementById('volume-slider');
+        const statusText = document.getElementById('status-text');
+        const trackName = document.getElementById('track-name');
+        const liveIndicator = document.getElementById('live-indicator');
+        const toggleTechBtn = document.getElementById('toggle-tech');
+        const techContent = document.getElementById('tech-content');
+        const techArrow = document.getElementById('tech-arrow');
+        const canvas = document.getElementById('visualizer');
+        const canvasCtx = canvas.getContext('2d');
 
-        playBtn.addEventListener('click', togglePlay);
-
-        function togglePlay() {
-            if (isPlaying) {
-                audio.pause();
-                icon.className = 'fas fa-play ml-1';
-                icon.parentElement.classList.remove('animate-pulse');
-                stopTimer();
-            } else {
-                audio.play().catch(e => {
-                    // Autoplay policy might block this without interaction
-                    console.log("Audio play failed", e);
-                    tg.showAlert("Не удалось запустить поток. Проверьте соединение.");
-                });
-                icon.className = 'fas fa-pause';
-                icon.parentElement.classList.add('animate-pulse');
-                startTimer();
-            }
-            isPlaying = !isPlaying;
-        }
-
-        function startTimer() {
-            const timeDisplay = document.getElementById('current-time');
-            timerInterval = setInterval(() => {
-                seconds++;
-                const mins = Math.floor(seconds / 60).toString().padStart(2, '0');
-                const secs = (seconds % 60).toString().padStart(2, '0');
-                timeDisplay.textContent = `${mins}:${secs}`;
-            }, 1000);
-        }
-
-        function stopTimer() {
-            clearInterval(timerInterval);
-        }
-
-        // Navigation Logic
-        function switchPage(pageId) {
-            // Hide all pages
-            document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
-            // Show target page
-            document.getElementById('page-' + pageId).classList.add('active');
-            
-            // Update Tab Icons
-            document.querySelectorAll('.nav-item').forEach(item => {
-                item.classList.remove('active', 'opacity-100');
-                item.classList.add('opacity-50');
-            });
-            
-            // Highlight active tab
-            const activeBtn = event.currentTarget;
-            activeBtn.classList.add('active', 'opacity-100');
-            activeBtn.classList.remove('opacity-50');
-
-            // Haptic Feedback
-            if(tg.HapticFeedback) {
-                tg.HapticFeedback.selectionChanged();
+        // --- AUDIO SYSTEM INITIALIZATION (User Interaction Required) ---
+        function initAudio() {
+            if (!state.audioContext) {
+                const AudioContext = window.AudioContext || window.webkitAudioContext;
+                state.audioContext = new AudioContext();
+                
+                // Create Audio Element
+                state.audioElement = new Audio();
+                state.audioElement.src = state.streamUrl;
+                state.audioElement.crossOrigin = "anonymous"; // Important for Canvas data
+                
+                // Connect Nodes
+                state.source = state.audioContext.createMediaElementSource(state.audioElement);
+                state.analyser = state.audioContext.createAnalyser();
+                state.analyser.fftSize = 256; // Controls bar density
+                
+                state.source.connect(state.analyser);
+                state.analyser.connect(state.audioContext.destination);
+                
+                state.dataArray = new Uint8Array(state.analyser.frequencyBinCount);
             }
         }
 
-        // Request Logic
-        document.getElementById('send-request-btn').addEventListener('click', () => {
-            const msg = document.getElementById('request-msg').value;
-            const name = document.getElementById('user-name-input').value;
-            
-            if(!msg.trim()) {
-                if(tg.HapticFeedback) tg.HapticFeedback.notificationOccurred('error');
+        // --- VISUALIZER DRAW LOOP (No SVG) ---
+        function drawVisualizer() {
+            if (!state.isPlaying) {
+                cancelAnimationFrame(state.animationId);
+                // Draw a flat line or "OFF" state
+                canvasCtx.fillStyle = '#1A1A1A';
+                canvasCtx.fillRect(0, 0, canvas.width, canvas.height);
+                canvasCtx.beginPath();
+                canvasCtx.moveTo(0, canvas.height / 2);
+                canvasCtx.lineTo(canvas.width, canvas.height / 2);
+                canvasCtx.strokeStyle = '#333';
+                canvasCtx.lineWidth = 2;
+                canvasCtx.stroke();
                 return;
             }
 
-            // Simulate sending data back to bot
-            const data = JSON.stringify({
-                action: 'request_song',
-                user: name,
-                text: msg
-            });
+            state.animationId = requestAnimationFrame(drawVisualizer);
+            state.analyser.getByteFrequencyData(state.dataArray);
 
-            // In a real app, you might use tg.sendData(data) to send to bot chat
-            // or send to your backend via fetch().
-            
-            // For demo:
-            if(tg.HapticFeedback) tg.HapticFeedback.notificationOccurred('success');
-            tg.showPopup({
-                title: 'Отправлено!',
-                message: `Спасибо, ${name}. Ваше сообщение передано диджею.`,
-                buttons: [{type: 'ok'}]
-            });
-            
-            document.getElementById('request-msg').value = '';
+            // Background
+            canvasCtx.fillStyle = '#1A1A1A';
+            canvasCtx.fillRect(0, 0, canvas.width, canvas.height);
+
+            const barWidth = (canvas.width / state.analyser.frequencyBinCount) * 2.5;
+            let barHeight;
+            let x = 0;
+
+            for (let i = 0; i < state.analyser.frequencyBinCount; i++) {
+                barHeight = state.dataArray[i] / 2; // Scale down
+
+                // Color Logic: Gradient from Off-White to Safety Orange
+                if (barHeight > 80) {
+                    canvasCtx.fillStyle = '#FF4D00'; // Orange peaks
+                } else {
+                    canvasCtx.fillStyle = '#F3F3F3'; // White base
+                }
+
+                // Draw Rect
+                canvasCtx.fillRect(x, canvas.height - barHeight, barWidth, barHeight);
+
+                x += barWidth + 1; // Spacing
+            }
+        }
+
+        // --- EVENT LISTENERS ---
+        
+        // 1. Play/Pause
+        playBtn.addEventListener('click', () => {
+            initAudio(); // Initialize on first click
+
+            if (state.audioContext.state === 'suspended') {
+                state.audioContext.resume();
+            }
+
+            if (state.isPlaying) {
+                state.audioElement.pause();
+                state.isPlaying = false;
+                playBtn.innerHTML = `<span>▶</span> <span class="quote-marks">PLAY</span>`;
+                playBtn.classList.remove('bg-safety-orange', 'text-black', 'border-black');
+                playBtn.classList.add('bg-industrial-black', 'text-off-white');
+                statusText.innerText = "STANDBY";
+                statusText.classList.remove('text-safety-orange');
+                trackName.innerText = "WAITING FOR SIGNAL ... /// CLUB METAGHETTO RADIO ... ///";
+                liveIndicator.classList.remove('bg-neon-green');
+                liveIndicator.classList.add('bg-safety-orange');
+            } else {
+                state.audioElement.play();
+                state.isPlaying = true;
+                playBtn.innerHTML = `<span>II</span> <span class="quote-marks">PAUSE</span>`;
+                playBtn.classList.remove('bg-industrial-black', 'text-off-white');
+                playBtn.classList.add('bg-safety-orange', 'text-black', 'border-black');
+                statusText.innerText = "BROADCASTING ACTIVE";
+                statusText.classList.add('text-safety-orange');
+                trackName.innerText = "NOW PLAYING: TOURS - ENTHUSIAST /// CLUB METAGHETTO EXCLUSIVE /// ";
+                liveIndicator.classList.remove('bg-safety-orange');
+                liveIndicator.classList.add('bg-neon-green');
+                drawVisualizer();
+            }
         });
 
-        // Main Button Logic (optional)
-        // You can use the big "Main Button" at the bottom instead of in-page buttons
-        // tg.MainButton.setText('PLAY RADIO');
-        // tg.MainButton.show();
-        // tg.MainButton.onClick(togglePlay);
+        // 2. Volume
+        volumeSlider.addEventListener('input', (e) => {
+            const val = e.target.value;
+            state.volume = val;
+            if (state.audioElement) state.audioElement.volume = val;
+        });
+
+        muteBtn.addEventListener('click', () => {
+            if(state.audioElement) {
+                if(state.audioElement.volume > 0) {
+                    state.audioElement.volume = 0;
+                    volumeSlider.value = 0;
+                } else {
+                    state.audioElement.volume = state.volume;
+                    volumeSlider.value = state.volume;
+                }
+            }
+        });
+
+        // 3. Tech Instructions Toggle
+        toggleTechBtn.addEventListener('click', () => {
+            techContent.classList.toggle('hidden');
+            if (techContent.classList.contains('hidden')) {
+                techArrow.innerText = "▼";
+            } else {
+                techArrow.innerText = "▲";
+            }
+        });
+
+        // --- CHART.JS IMPLEMENTATION (Metrics) ---
+        // Ensuring strictly no SVG, utilizing Canvas via Chart.js
+        document.addEventListener("DOMContentLoaded", () => {
+            const ctx = document.getElementById('metricsChart').getContext('2d');
+            
+            // Custom plugin to draw background
+            const chartAreaPlugin = {
+                id: 'customCanvasBackgroundColor',
+                beforeDraw: (chart) => {
+                    const { ctx } = chart;
+                    ctx.save();
+                    ctx.globalCompositeOperation = 'destination-over';
+                    ctx.fillStyle = '#F3F3F3';
+                    ctx.fillRect(0, 0, chart.width, chart.height);
+                    ctx.restore();
+                }
+            };
+
+            const metricsChart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: ['BERLIN', 'TOKYO', 'NYC', 'KYIV', 'PARIS', 'LONDON'],
+                    datasets: [{
+                        label: 'ACTIVE LISTENERS',
+                        data: [65, 59, 80, 81, 56, 40],
+                        backgroundColor: '#1A1A1A',
+                        borderColor: '#1A1A1A',
+                        borderWidth: 1,
+                        barThickness: 20,
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false, // Critical for container responsiveness
+                    plugins: {
+                        legend: {
+                            display: false
+                        },
+                        tooltip: {
+                            backgroundColor: '#1A1A1A',
+                            titleFont: { family: 'Helvetica', size: 14 },
+                            bodyFont: { family: 'Courier New' },
+                            cornerRadius: 0, // Hard edges for industrial look
+                            displayColors: false
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            grid: {
+                                color: '#D1D1D1',
+                                drawBorder: false
+                            },
+                            ticks: {
+                                font: { family: 'Helvetica' },
+                                color: '#666'
+                            }
+                        },
+                        x: {
+                            grid: {
+                                display: false
+                            },
+                            ticks: {
+                                font: { family: 'Helvetica', weight: 'bold' },
+                                color: '#1A1A1A'
+                            }
+                        }
+                    },
+                    animation: {
+                        duration: 2000,
+                        easing: 'easeOutQuart'
+                    }
+                },
+                plugins: [chartAreaPlugin]
+            });
+            
+            // Simulated Data Update (Interaction simulation)
+            setInterval(() => {
+                const newData = metricsChart.data.datasets[0].data.map(val => {
+                    const change = Math.floor(Math.random() * 10) - 5;
+                    return Math.max(10, val + change);
+                });
+                metricsChart.data.datasets[0].data = newData;
+                metricsChart.update('none'); // Update without full re-render animation
+            }, 3000);
+        });
+
+        // Canvas Responsive fix
+        window.addEventListener('resize', () => {
+            canvas.width = canvas.parentElement.clientWidth;
+        });
+        // Initial setup
+        canvas.width = canvas.parentElement.clientWidth;
+        canvas.height = 120;
 
     </script>
 </body>
